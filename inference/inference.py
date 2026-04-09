@@ -13,9 +13,6 @@ from huggingface_hub import hf_hub_download
 
 from models.pase import PASE
 
-dewavlm_ckpt_path = '/work/user_data/xiaobin/Pre-trained/PASE_new/DeWavLM.tar'
-vocoder_ckpt_path = '/work/user_data/xiaobin/Pre-trained/PASE_new/Vocoder_Dual.tar'
-
 REPO_ID = "cisco-ai/pase"
 
 def get_checkpoint_path(ckpt_arg, filename, download_dir=None):
