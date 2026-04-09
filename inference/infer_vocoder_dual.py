@@ -2,6 +2,9 @@
 # Apache-2.0
 
 import os
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parent.parent))
 import torch
 import numpy as np
 import soundfile as sf
@@ -41,9 +44,9 @@ def infer(args):
     ref_scp_list = []
     
     for wav_path in tqdm(wavs):
-        true_wav, fs = sf.read(wav_path, dtype='float32')
+        noisy, fs = sf.read(wav_path, dtype='float32')
             
-        input = torch.FloatTensor(true_wav)[None,None].to(device)
+        input = torch.FloatTensor(noisy)[None,None].to(device)
         
         feat_a, feat_p = encoder(input)
         output  = model(feat_p, feat_a)
@@ -51,10 +54,10 @@ def infer(args):
         esti_wav = output.cpu().detach().numpy().squeeze()
         esti_wav = esti_wav / np.max(np.abs(esti_wav)) * 0.9
         
-        if esti_wav.shape[-1] < true_wav.shape[-1]:
-            esti_wav = np.pad(esti_wav, (0, true_wav.shape[-1]-esti_wav.shape[-1]))
+        if esti_wav.shape[-1] < noisy.shape[-1]:
+            esti_wav = np.pad(esti_wav, (0, noisy.shape[-1]-esti_wav.shape[-1]))
         else:
-            esti_wav = esti_wav[..., :true_wav.shape[-1]]
+            esti_wav = esti_wav[..., :noisy.shape[-1]]
         
         uid = os.path.basename(wav_path).split(f'.{ext}')[0]
         

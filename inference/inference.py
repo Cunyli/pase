@@ -1,15 +1,19 @@
 # Copyright 2025 Cisco Systems, Inc. and its affiliates
 # Apache-2.0
 
-import torch
 import os
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+import numpy as np
+import torch
 import soundfile as sf
 from tqdm import tqdm
 
 from models.pase import PASE
 
-wavlm_ckpt_path = '/work/user_data/xiaobin/Pre-trained/PASE/DeWavLM.tar'
-vocoder_ckpt_path = '/work/user_data/xiaobin/Pre-trained/PASE/Vocoder_dual.tar'
+dewavlm_ckpt_path = '/work/user_data/xiaobin/Pre-trained/PASE_new/DeWavLM.tar'
+vocoder_ckpt_path = '/work/user_data/xiaobin/Pre-trained/PASE_new/Vocoder_Dual.tar'
 
 
 def inference_file(input_file, output_file, model):
@@ -26,6 +30,10 @@ def inference_file(input_file, output_file, model):
     with torch.inference_mode():
         output = model(input_tensor)
     enhanced = output.cpu().detach().numpy().squeeze()
+    
+    scale = np.max(np.abs(audio))
+    enhanced = enhanced / (np.max(np.abs(enhanced)) + 1e-8) * scale
+    
     sf.write(output_file, enhanced, fs)
 
 
@@ -50,20 +58,20 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(
         description="Run PASE inference on audio files.")
-    parser.add_argument('--input_dir', type=str, required=True,
+    parser.add_argument('-I', '--input_dir', type=str, required=True,
                         help='Input directory with audio files')
-    parser.add_argument('--output_dir', type=str, required=True,
+    parser.add_argument('-O', '--output_dir', type=str, required=True,
                         help='Output directory for enhanced files')
-    parser.add_argument('--device', type=str, default='cuda:0',
+    parser.add_argument('-D', '--device', type=str, default='cuda:0',
                         help='Torch device (default: cuda:0)')
-    parser.add_argument('--extension', type=str, default='.wav',
+    parser.add_argument('-E', '--extension', type=str, default='.wav',
                         help='Audio file extension (default: .wav)')
     args = parser.parse_args()
 
     device = torch.device(args.device)
     model = PASE(
-        wavlm_ckpt_path=wavlm_ckpt_path,
-        wavlm_output_layer=[1, 24],
+        dewavlm_ckpt_path=dewavlm_ckpt_path,
+        dewavlm_output_layer=[1, 24],
         vocoder_ckpt_path=vocoder_ckpt_path,
     ).to(device).eval()
 

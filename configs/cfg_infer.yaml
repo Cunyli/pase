@@ -4,8 +4,8 @@ test_dataset:
   extension: wav
 
 network:
-  exp_path: /work/user_data/xiaobin/Experiments/exp_PASE/exp_vocoder_L24_2025-12-04-12h28m
+  exp_path: /work/user_data/xiaobin/Experiments/exp_PASE_new/exp_DeWavLM_2026-03-24-14h57m
   config: ${network.exp_path}/config.yaml
-  ckpt_name: model_001
+  ckpt_name: model_200
   checkpoint: ${network.exp_path}/checkpoints/${network.ckpt_name}.tar
   enh_folder: ${network.exp_path}/${network.ckpt_name}/enhanced_libritts_test

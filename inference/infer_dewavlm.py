@@ -2,6 +2,9 @@
 # Apache-2.0
 
 import os
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parent.parent))
 import torch
 import numpy as np
 import soundfile as sf
