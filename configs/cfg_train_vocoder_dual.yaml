@@ -1,5 +1,5 @@
 encoder_config:
-  wavlm_ckpt_path: /work/user_data/xiaobin/Pre-trained/PASE/DeWavLM.tar
+  wavlm_ckpt_path: /work/user_data/xiaobin/Pre-trained/PASE_new/DeWavLM.tar
   output_layer: [1, 24]
 
 vocoder_config:
@@ -24,7 +24,7 @@ optimizer:
 
 scheduler:
   warmup_steps: 10000  # default: 20k steps
-  decay_until_step: 200000  # default: 400k steps
+  decay_until_step: 200000  # default: 200k steps
   max_lr: 2e-4
   min_lr: 1e-6
 
@@ -48,19 +48,19 @@ samplerate:
   
 train_dataset:
   speech_csvs: [
-    /work/user_data/xiaobin/Datasets/URGENT2/commonvoice/meta_de_resampled_filtered_train.csv,
-    /work/user_data/xiaobin/Datasets/URGENT2/commonvoice/meta_en_resampled_filtered_train.csv,
-    /work/user_data/xiaobin/Datasets/URGENT2/commonvoice/meta_es_resampled_filtered_train.csv,
-    /work/user_data/xiaobin/Datasets/URGENT2/commonvoice/meta_fr_resampled_filtered_train.csv,
-    /work/user_data/xiaobin/Datasets/URGENT2/commonvoice/meta_zh-CN_resampled_filtered_train.csv,
+    # /work/user_data/xiaobin/Datasets/URGENT2/commonvoice/meta_de_resampled_filtered_train.csv,
+    # /work/user_data/xiaobin/Datasets/URGENT2/commonvoice/meta_en_resampled_filtered_train.csv,
+    # /work/user_data/xiaobin/Datasets/URGENT2/commonvoice/meta_es_resampled_filtered_train.csv,
+    # /work/user_data/xiaobin/Datasets/URGENT2/commonvoice/meta_fr_resampled_filtered_train.csv,
+    # /work/user_data/xiaobin/Datasets/URGENT2/commonvoice/meta_zh-CN_resampled_filtered_train.csv,
     /work/user_data/xiaobin/Datasets/URGENT2/dns5_fullband/meta_speech_resampled_filtered_train.csv,
     /work/user_data/xiaobin/Datasets/URGENT2/libritts/meta_resampled_filtered_train.csv,
     /work/user_data/xiaobin/Datasets/URGENT2/vctk/meta_train.csv,
   ]
   noise_csvs: [
     /work/user_data/xiaobin/Datasets/URGENT2/dns5_fullband/meta_noise_resampled_train.csv,
-    /work/user_data/xiaobin/Datasets/URGENT2/fma/meta_noise_resampled_train.csv,
-    /work/user_data/xiaobin/Datasets/URGENT2/fsd50k/meta_noise_resampled_train.csv
+    # /work/user_data/xiaobin/Datasets/URGENT2/fma/meta_noise_resampled_train.csv,
+    # /work/user_data/xiaobin/Datasets/URGENT2/fsd50k/meta_noise_resampled_train.csv
   ]
   rir_csvs: [
     /work/user_data/xiaobin/Datasets/URGENT2/dns5_fullband/meta_rir.csv
@@ -80,19 +80,19 @@ train_dataloader:
 
 validation_dataset:
   speech_csvs: [
-    /work/user_data/xiaobin/Datasets/URGENT2/commonvoice/meta_de_resampled_validation.csv,
-    /work/user_data/xiaobin/Datasets/URGENT2/commonvoice/meta_en_resampled_validation.csv,
-    /work/user_data/xiaobin/Datasets/URGENT2/commonvoice/meta_es_resampled_validation.csv,
-    /work/user_data/xiaobin/Datasets/URGENT2/commonvoice/meta_fr_resampled_validation.csv,
-    /work/user_data/xiaobin/Datasets/URGENT2/commonvoice/meta_zh-CN_resampled_validation.csv,
+    # /work/user_data/xiaobin/Datasets/URGENT2/commonvoice/meta_de_resampled_validation.csv,
+    # /work/user_data/xiaobin/Datasets/URGENT2/commonvoice/meta_en_resampled_validation.csv,
+    # /work/user_data/xiaobin/Datasets/URGENT2/commonvoice/meta_es_resampled_validation.csv,
+    # /work/user_data/xiaobin/Datasets/URGENT2/commonvoice/meta_fr_resampled_validation.csv,
+    # /work/user_data/xiaobin/Datasets/URGENT2/commonvoice/meta_zh-CN_resampled_validation.csv,
     /work/user_data/xiaobin/Datasets/URGENT2/dns5_fullband/meta_speech_resampled_filtered_validation.csv,
     /work/user_data/xiaobin/Datasets/URGENT2/libritts/meta_resampled_validation.csv,
     /work/user_data/xiaobin/Datasets/URGENT2/vctk/meta_validation.csv,
   ]
   noise_csvs: [
     /work/user_data/xiaobin/Datasets/URGENT2/dns5_fullband/meta_noise_resampled_validation.csv,
-    /work/user_data/xiaobin/Datasets/URGENT2/fma/meta_noise_resampled_validation.csv,
-    /work/user_data/xiaobin/Datasets/URGENT2/fsd50k/meta_noise_resampled_validation.csv
+    # /work/user_data/xiaobin/Datasets/URGENT2/fma/meta_noise_resampled_validation.csv,
+    # /work/user_data/xiaobin/Datasets/URGENT2/fsd50k/meta_noise_resampled_validation.csv
   ]
   rir_csvs: [
     /work/user_data/xiaobin/Datasets/URGENT2/dns5_fullband/meta_rir.csv
@@ -114,6 +114,6 @@ trainer:
   epochs: 400
   save_checkpoint_interval: 10
   clip_grad_norm_value: 3.0
-  exp_path: /work/user_data/xiaobin/Experiments/exp_PASE/exp_vocoder_dual
+  exp_path: /work/user_data/xiaobin/Experiments/exp_PASE_new/exp_vocoder_dual
   resume: False
   resume_datetime: 2025-07-27-12h11m

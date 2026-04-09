@@ -11,12 +11,12 @@ from .vocoder.wavlmdec_dual import WavLMDec as Decoder
 class PASE(nn.Module):
     def __init__(
         self, 
-        wavlm_ckpt_path="/work/user_data/xiaobin/Pre-trained/PASE/DeWavLM.tar",
-        wavlm_output_layer: Union[int, List[int]] = [1,24],
-        vocoder_ckpt_path="/work/user_data/xiaobin/Pre-trained/PASE/Vocoder_L24.tar",
+        dewavlm_ckpt_path="/work/user_data/xiaobin/Pre-trained/PASE/DeWavLM.tar",
+        dewavlm_output_layer: Union[int, List[int]] = [1,24],
+        vocoder_ckpt_path="/work/user_data/xiaobin/Pre-trained/PASE/Vocoder_Dual.tar",
     ):
         super().__init__()
-        self.encoder = Encoder(wavlm_ckpt_path, wavlm_output_layer)
+        self.encoder = Encoder(dewavlm_ckpt_path, dewavlm_output_layer)
         self.decoder = Decoder.from_pretrained(vocoder_ckpt_path)
 
     @torch.no_grad()
@@ -56,5 +56,4 @@ if __name__ == "__main__":
     for p in model.parameters():
         params += p.numel()
     print(macs, f"{params / 1e6:.2f} M")
-
 
