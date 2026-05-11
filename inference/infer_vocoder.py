@@ -7,15 +7,15 @@ import numpy as np
 import soundfile as sf
 from tqdm import tqdm
 from librosa.util import find_files
-from omegaconf import OmegaConf
 from models.wavlm.feature_extractor import WavLM_feat
 from models.vocoder.wavlmdec import WavLMDec as Model
+from utils.config_utils import load_config
 
 
 @torch.inference_mode()
 def infer(args):
-    cfg_infer = OmegaConf.load(args.config)
-    cfg_network = OmegaConf.load(cfg_infer.network.config)
+    cfg_infer = load_config(args.config)
+    cfg_network = load_config(cfg_infer.network.config)
     
     wav_folder = cfg_infer.test_dataset.clean_dir
     save_folder = cfg_infer.network.enh_folder
@@ -28,7 +28,9 @@ def infer(args):
     device = torch.device(f'cuda:{args.device}' if torch.cuda.is_available() else 'cpu')
 
     encoder = WavLM_feat(**cfg_network['encoder_config']).to(device).eval()
-    model = Model(**cfg_network['vocoder_config']).to(device).eval()
+    vocoder_config = dict(cfg_network['vocoder_config'])
+    vocoder_config.pop("pretrained_ckpt_path", None)
+    model = Model(**vocoder_config).to(device).eval()
     
     model.load_state_dict(
         torch.load(cfg_infer['network']['checkpoint'], map_location=device)['generator']

@@ -12,7 +12,6 @@ import numpy as np
 import torch.distributed as dist
 import toml
 from datetime import datetime
-from omegaconf import OmegaConf
 from tqdm import tqdm
 from glob import glob
 from pathlib import Path
@@ -34,6 +33,7 @@ from utils.loss import (
     discriminator_loss,
     MultiScaleMelSpectrogramLoss,
 )
+from utils.config_utils import load_config
 from utils.scheduler import LinearWarmupCosineAnnealingLR as WarmupLR
 
 
@@ -78,7 +78,19 @@ def run(rank, config, args):
                                                         collate_fn=collate_fn)
     
     encoder = Encoder(**config['encoder_config']).to(args.device)
-    generator = Generator(**config['vocoder_config']).to(args.device)
+    generator_config = dict(config['vocoder_config'])
+    pretrained_generator_ckpt = generator_config.pop("pretrained_ckpt_path", None)
+    generator = Generator(**generator_config).to(args.device)
+    if pretrained_generator_ckpt:
+        print("[Vocoder] Initializing generator from:", pretrained_generator_ckpt)
+        checkpoint = torch.load(pretrained_generator_ckpt, map_location="cpu")
+        state_dict = checkpoint.get("model", checkpoint.get("generator"))
+        if state_dict is None:
+            raise KeyError(
+                f"{pretrained_generator_ckpt} must contain a 'model' or 'generator' state dict"
+            )
+        missing, unexpected = generator.load_state_dict(state_dict, strict=False)
+        print(f"[Vocoder] missing keys: {len(missing)}, unexpected keys: {len(unexpected)}")
     
     mpd = MultiPeriodDiscriminator(**config['discriminator_config']['mpd']).to(args.device)
     mbd = MultiBandDiscriminator(**config['discriminator_config']['mbd']).to(args.device)
@@ -409,8 +421,6 @@ class Trainer:
 
 
 if __name__ == '__main__':
-    from omegaconf import OmegaConf
-    
     parser = argparse.ArgumentParser()
     parser.add_argument('-C', '--config', default='configs/cfg_train_vocoder.yaml')
     parser.add_argument('-D', '--device', default='0', help='The index of the available devices, e.g. 0,1,2,3')
@@ -418,7 +428,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     os.environ["CUDA_VISIBLE_DEVICES"] = args.device
     args.world_size = len(args.device.split(','))
-    config = OmegaConf.load(args.config)
+    config = load_config(args.config)
     
     if args.world_size > 1:
         torch.multiprocessing.spawn(

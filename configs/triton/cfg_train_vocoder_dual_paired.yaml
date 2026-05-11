@@ -1,0 +1,89 @@
+dataset_type: paired
+
+encoder_config:
+  wavlm_ckpt_path: ${oc.env:PASE_DEWAVLM_CKPT}
+  output_layer: [1, 24]
+
+vocoder_config:
+  pretrained_ckpt_path: ${oc.env:PASE_VOCODER_DUAL_CKPT}
+  input_channels: 1024
+  dim: 768
+  intermediate_dim: 2304
+  num_layers: 12
+  n_fft: 1280
+  hop_length: 320
+
+discriminator_config:
+  mpd:
+    mpd_reshapes: [2, 3, 5, 7, 11]
+  mbd:
+    mbd_fft_sizes: [2048, 1024, 512]
+
+DDP:
+  world_size: 1
+
+optimizer:
+  lr: 1e-5
+
+scheduler:
+  warmup_steps: 1000
+  decay_until_step: 20000
+  max_lr: 1e-5
+  min_lr: 1e-6
+
+loss:
+  sampling_rate: 16000
+  n_mels: [5, 10, 20, 40, 80, 160, 320]
+  window_lengths: [32, 64, 128, 256, 512, 1024, 2048]
+  mag_weight: 0.0
+  log_weight: 1.0
+  pow: 1.0
+  weight: 1.0
+  window_type: "hann"
+
+coeff:
+  recons: 15
+  adv: 2
+  feat: 1
+
+samplerate: 16000
+
+train_dataset:
+  pair_csvs:
+    - ${oc.env:PASE_TRAIN_PAIRS_CSV}
+  wav_len: 4
+  num_per_epoch: 0
+  random_start: true
+  default_fs: 16000
+  mode: train
+  normalize: true
+
+train_dataloader:
+  batch_size: 4
+  num_workers: 4
+  drop_last: true
+  pin_memory: true
+
+validation_dataset:
+  pair_csvs:
+    - ${oc.env:PASE_VALID_PAIRS_CSV}
+  wav_len: 4
+  num_per_epoch: 0
+  random_start: false
+  default_fs: 16000
+  mode: validation
+  normalize: true
+
+validation_dataloader:
+  batch_size: 1
+  num_workers: 4
+  drop_last: false
+  pin_memory: true
+
+trainer:
+  epochs: 20
+  save_checkpoint_interval: 5
+  clip_grad_norm_value: 3.0
+  exp_path: ${oc.env:PASE_EXPERIMENT_ROOT}/exp_vocoder_dual_paired
+  resume: false
+  resume_datetime: ""

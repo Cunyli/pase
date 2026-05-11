@@ -10,15 +10,15 @@ import numpy as np
 import soundfile as sf
 from tqdm import tqdm
 from librosa.util import find_files
-from omegaconf import OmegaConf
 from models.wavlm.feature_extractor import WavLM_feat as Encoder
 from models.vocoder.wavlmdec import WavLMDec as Vocoder
+from utils.config_utils import load_config
 
 
 @torch.inference_mode()
 def infer(args):
-    cfg_infer = OmegaConf.load(args.config)
-    cfg_network = OmegaConf.load(cfg_infer.network.config)
+    cfg_infer = load_config(args.config)
+    cfg_network = load_config(cfg_infer.network.config)
     
     noisy_folder = cfg_infer.test_dataset.noisy_dir
     clean_folder = cfg_infer.test_dataset.clean_dir

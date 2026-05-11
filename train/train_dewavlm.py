@@ -21,9 +21,10 @@ from pathlib import Path
 from torch.utils.tensorboard import SummaryWriter
 from utils.distributed_utils import reduce_value
 
-from loaders.dataloader import URGENT2Dataset as WavLMDataset
+from loaders.factory import get_dataset_class
 from models.wavlm.feature_extractor import WavLM_feat
 from models.vocoder.wavlmdec import WavLMDec
+from utils.config_utils import load_config
 from utils.scheduler import LinearWarmupCosineAnnealingLR as WarmupLR
 
 
@@ -48,6 +49,7 @@ def run(rank, config, args):
     args.rank = rank
     args.device = torch.device(f"cuda:{rank}")
     
+    WavLMDataset = get_dataset_class(config.get("dataset_type", "urgent2"))
     collate_fn = WavLMDataset.collate_fn if hasattr(WavLMDataset, "collate_fn") else None
     shuffle = False if args.world_size > 1 else True
 
@@ -330,8 +332,6 @@ class Trainer:
 
 
 if __name__ == '__main__':
-    from omegaconf import OmegaConf
-    
     parser = argparse.ArgumentParser()
     parser.add_argument('-C', '--config', default='configs/cfg_train_wavlm.yaml')
     parser.add_argument('-D', '--device', default='0', help='The index of the available devices, e.g. 0,1,2,3')
@@ -339,7 +339,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     os.environ["CUDA_VISIBLE_DEVICES"] = args.device
     args.world_size = len(args.device.split(','))
-    config = OmegaConf.load(args.config)
+    config = load_config(args.config)
     
     if args.world_size > 1:
         torch.multiprocessing.spawn(
