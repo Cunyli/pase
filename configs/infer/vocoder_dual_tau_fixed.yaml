@@ -1,0 +1,12 @@
+test_dataset:
+  noisy_dir: ${oc.env:PASE_TAU_FIXED_TEST_NOISY_DIR,/path/to/tau/simulated/phone_room/test/noisy}
+  clean_dir: ${oc.env:PASE_TAU_ROOT,/path/to/tau}
+  pair_csv: ${oc.env:PASE_TAU_FIXED_TEST_CSV,/path/to/tau/simulated/phone_room/test/paired.csv}
+  extension: wav
+
+network:
+  exp_path: ${oc.env:PASE_INFER_EXP_PATH,checkpoints/exp_vocoder_dual_tau_sim}
+  config: ${oc.env:PASE_INFER_NETWORK_CONFIG,${network.exp_path}/config.yaml}
+  ckpt_name: ${oc.env:PASE_INFER_CKPT_NAME,model_120}
+  checkpoint: ${oc.env:PASE_INFER_CHECKPOINT,${network.exp_path}/checkpoints/${network.ckpt_name}.tar}
+  enh_folder: ${oc.env:PASE_TAU_ENHANCED_DIR,/path/to/tau/enhanced/pase/phone_room/test}

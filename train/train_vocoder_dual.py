@@ -5,7 +5,6 @@
 
 import os
 import torch
-import shutil
 import random
 import argparse
 import numpy as np
@@ -15,8 +14,8 @@ from tqdm import tqdm
 from glob import glob
 from pathlib import Path
 import soundfile as sf
-from torch.utils.tensorboard import SummaryWriter
 from utils.distributed_utils import reduce_value
+from utils.experiment_utils import build_run_paths, init_wandb_run, log_wandb, snapshot_run
 
 from loaders.factory import get_dataset_class
 from models.wavlm.feature_extractor import WavLM_feat as Encoder
@@ -57,7 +56,7 @@ def run(rank, config, args):
     args.rank = rank
     args.device = torch.device(f"cuda:{rank}")
     
-    Dataset = get_dataset_class(config.get("dataset_type", "urgent2"))
+    Dataset = get_dataset_class(config.get("dataset_type", "use_simulation_onthefly"))
     collate_fn = Dataset.collate_fn if hasattr(Dataset, "collate_fn") else None
     shuffle = False if args.world_size > 1 else True
 
@@ -154,40 +153,28 @@ class Trainer:
         self.save_checkpoint_interval = self.trainer_config['save_checkpoint_interval']
         self.clip_grad_norm_value = self.trainer_config['clip_grad_norm_value']
         self.resume = self.trainer_config['resume']
-
-        if not self.resume:
-            self.exp_path = self.trainer_config['exp_path'] + '_' + datetime.now().strftime("%Y-%m-%d-%Hh%Mm")
- 
-        else:
-            self.exp_path = self.trainer_config['exp_path'] + '_' + self.trainer_config['resume_datetime']
-
-        self.log_path = os.path.join(self.exp_path, 'logs')
-        self.checkpoint_path = os.path.join(self.exp_path, 'checkpoints')
-        self.sample_path = os.path.join(self.exp_path, 'val_samples')
-        self.code_path = os.path.join(self.exp_path, 'codes')
-
-        os.makedirs(self.log_path, exist_ok=True)
-        os.makedirs(self.checkpoint_path, exist_ok=True)
-        os.makedirs(self.sample_path, exist_ok=True)
-        os.makedirs(self.code_path, exist_ok=True)
+        self.experiment = config.get('experiment', Path(self.trainer_config['exp_path']).name)
+        paths = build_run_paths(self.trainer_config, self.experiment)
+        self.exp_path = str(paths["exp_path"])
+        self.log_path = str(paths["log_path"])
+        self.checkpoint_path = str(paths["checkpoint_path"])
+        self.sample_path = str(paths["sample_path"])
+        self.code_path = str(paths["code_path"])
 
         # save the config
         if self.rank == 0:
-            shutil.copy2(__file__, self.exp_path)
-            shutil.copy2(args.config, Path(self.exp_path) / 'config.yaml')
-            
-            for file in Path(__file__).parent.parent.iterdir():
-                if file.is_file():
-                    shutil.copy2(file, self.code_path)
-            for d in ['configs', 'loaders', 'models', 'train', 'inference', 'utils']:
-                shutil.copytree(Path(__file__).parent.parent / d, Path(self.code_path) / d, dirs_exist_ok=True)
-            self.writer = SummaryWriter(self.log_path)
+            snapshot_run(__file__, args.config, Path(self.exp_path), Path(self.code_path))
+            self.wandb_run = init_wandb_run(
+                config,
+                args,
+                self.exp_path,
+                self.log_path,
+                self.checkpoint_path,
+                self.experiment,
+            )
 
         self.start_epoch = 1
         self.best_score = 1e8
-
-        if self.resume:
-            self._resume_checkpoint()
 
 
     def _set_train_mode(self):
@@ -309,7 +296,7 @@ class Trainer:
             self.scheduler_d.step()
             
             self.train_bar.desc = '   train[{}/{}][{}]'.format(
-                epoch, self.epochs + self.start_epoch-1, datetime.now().strftime("%Y-%m-%d-%H:%M"))
+                epoch, self.epochs, datetime.now().strftime("%Y-%m-%d-%H:%M"))
 
             self.train_bar.postfix = 'L={:.2f}, Lg={:.2f}, Lf={:.2f}, Ld={:.2f}'.format(total_loss / step,
                                                                                         total_loss_adv / step,
@@ -319,11 +306,23 @@ class Trainer:
             torch.cuda.synchronize(self.device)
 
         if self.rank == 0:
-            self.writer.add_scalars('lr', {'lr': self.optimizer_g.param_groups[0]['lr']}, epoch)
-            self.writer.add_scalars('train_loss', {'loss': total_loss / step,
-                                                   'loss_Adv': total_loss_adv / step,
-                                                   'loss_Feat': total_loss_feat / step, 
-                                                   'loss_Dis': total_loss_dis / step}, epoch)
+            # TensorBoard logging disabled: using wandb instead
+            # self.writer.add_scalars('lr', {'lr': self.optimizer_g.param_groups[0]['lr']}, epoch)
+            # self.writer.add_scalars('train_loss', {'loss': total_loss / step,
+            #                                        'loss_Adv': total_loss_adv / step,
+            #                                        'loss_Feat': total_loss_feat / step,
+            #                                        'loss_Dis': total_loss_dis / step}, epoch)
+            log_wandb(
+                self.wandb_run,
+                {
+                    'lr': self.optimizer_g.param_groups[0]['lr'],
+                    'train/loss': total_loss / step,
+                    'train/loss_Adv': total_loss_adv / step,
+                    'train/loss_Feat': total_loss_feat / step,
+                    'train/loss_Dis': total_loss_dis / step,
+                },
+                epoch,
+            )
 
 
     @torch.inference_mode()
@@ -383,7 +382,7 @@ class Trainer:
                 sf.write(enhanced_path, esti_wav, samplerate=self.default_fs)
                 
             self.validation_bar.desc = 'validate[{}/{}][{}]'.format(
-                epoch, self.epochs + self.start_epoch-1, datetime.now().strftime("%Y-%m-%d-%H:%M"))
+                epoch, self.epochs, datetime.now().strftime("%Y-%m-%d-%H:%M"))
 
             self.validation_bar.postfix = 'L={:.2f}, Lg={:.2f}, Lf={:.2f}, Ld={:.2f}'.format(total_loss / step,
                                                                                         total_loss_adv / step,
@@ -394,10 +393,21 @@ class Trainer:
             torch.cuda.synchronize(self.device)
 
         if self.rank == 0:
-            self.writer.add_scalars('val_loss', {'loss': total_loss / step,
-                                                   'loss_Adv': total_loss_adv / step,
-                                                   'loss_Feat': total_loss_feat / step, 
-                                                   'loss_Dis': total_loss_dis / step}, epoch)
+            # TensorBoard logging disabled: using wandb instead
+            # self.writer.add_scalars('val_loss', {'loss': total_loss / step,
+            #                                        'loss_Adv': total_loss_adv / step,
+            #                                        'loss_Feat': total_loss_feat / step,
+            #                                        'loss_Dis': total_loss_dis / step}, epoch)
+            log_wandb(
+                self.wandb_run,
+                {
+                    'val/loss': total_loss / step,
+                    'val/loss_Adv': total_loss_adv / step,
+                    'val/loss_Feat': total_loss_feat / step,
+                    'val/loss_Dis': total_loss_dis / step,
+                },
+                epoch,
+            )
 
         return total_loss / step
 
@@ -406,7 +416,15 @@ class Trainer:
         if self.resume:
             self._resume_checkpoint()
 
-        for epoch in range(self.start_epoch, self.epochs + self.start_epoch):
+        if self.start_epoch > self.epochs:
+            if self.rank == 0:
+                print(
+                    f"Checkpoint is already at epoch {self.start_epoch - 1}; "
+                    f"target total epochs is {self.epochs}. Nothing to train."
+                )
+            return
+
+        for epoch in range(self.start_epoch, self.epochs + 1):
             if self.train_sampler is not None:
                 self.train_sampler.set_epoch(epoch)
 
@@ -426,13 +444,16 @@ class Trainer:
                     os.path.join(self.checkpoint_path,
                     'best_model_{}.tar'.format(str(self.state_dict_best['epoch']).zfill(3))))
 
+            if self.wandb_run is not None:
+                self.wandb_run.finish()
+
             print('------------Training for {} epochs has done!------------'.format(self.epochs))
 
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-C', '--config', default='configs/cfg_train_vocoder_dual.yaml')
+    parser.add_argument('-C', '--config', default='configs/train/vocoder_dual_onthefly.yaml')
     parser.add_argument('-D', '--device', default='0', help='The index of the available devices, e.g. 0,1,2,3')
 
     args = parser.parse_args()

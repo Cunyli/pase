@@ -79,7 +79,7 @@ if __name__ == "__main__":
     import argparse
     
     parser = argparse.ArgumentParser()
-    parser.add_argument('-C', '--config', default='configs/cfg_infer.yaml')
+    parser.add_argument('-C', '--config', default='configs/infer/vocoder_dual_tau_fixed.yaml')
     parser.add_argument('-D', '--device', default='0', help='Index of the gpu device')
 
     args = parser.parse_args()

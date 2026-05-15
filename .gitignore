@@ -1,2 +1,70 @@
+# Python caches
+__pycache__/
 **/__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local environments
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+env/
+*.egg-info/
+
+# Local editor and OS files
+.DS_Store
+.idea/
+.vscode/
+
+# Local agent/project notes
+AGENTS.md
+docs/
+
+# Training and inference artifacts
+checkpoints/
+logs/
+outputs/
+!outputs/
+outputs/*
+!outputs/examples/
+!outputs/examples/**
+wandb/
+runs/
+tmp/
+configs/generated/
+
+# Model weights and generated checkpoints
+*.ckpt
+*.pt
+*.pth
+*.tar
+*.safetensors
+*.onnx
+
+# Slurm and runtime logs
+*.log
+*.out
+*.err
+slurm-*.out
+
+# Generated arrays, media, and metrics
+*.npy
+*.npz
+*.h5
+*.hdf5
+*.jsonl
+*.csv.tmp
+*.wav.tmp
+*.flac.tmp
+*.mp3.tmp
+
+# Local scratch and misspelled historical scratch dirs
 /test_scipts/
+/test_scripts/

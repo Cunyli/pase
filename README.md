@@ -49,26 +49,26 @@ python -m inference.inference -I <input_dir> -O <output_dir> [options]
 | `-D` (`--device`)     | default: `cuda:0`     | Torch device to run inference on, e.g., `cuda:0`, `cuda:1`, or `cpu`. |
 | `-E` (`--extension`)  | default: `.wav`       | Audio file extension to process.                                      |
 
-Audio examples are provided in `./test/audio_enh`.
+Audio examples are provided in `outputs/examples/`.
 
 ## Training
 ### Step 1: Training a single-stream vocoder
 - training script: `train/train_vocoder.py`
-- training configuration: `configs/cfg_train_vocoder.yaml`
+- training configuration: `configs/train/vocoder_clean.yaml`
 
     ```bash
-    python -m train.train_vocoder -C configs/cfg_train_vocoder.yaml -D 0,1,2,3
+    python -m train.train_vocoder -C configs/train/vocoder_clean.yaml -D 0,1,2,3
     ```
 - inference script: `inference/infer_vocoder.py`
     ```bash
-    python -m inference.infer_vocoder -C configs/cfg_infer.yaml -D 0
+    python -m inference.infer_vocoder -C configs/infer/vocoder_dual_tau_fixed.yaml -D 0
     ```
 
 This step aims to pre-train a vocoder using the 24th-layer WavLM representations. The pre-trained single-stream vocoder is then used in Step 2 to reconstruct waveforms, enabling the evaluation of DeWavLM’s performance.
 
 ### Step 2: Finetuning WavLM
 - training script: `train/train_dewavlm.py`
-- training configuration: `configs/cfg_train_dewavlm.yaml`
+- training configuration: `configs/train/dewavlm_onthefly.yaml`
 - inference script: `inference/infer_dewavlm.py`
 
 (The usage is the same as in Step 1.)
@@ -77,7 +77,7 @@ This step aims to obtain a denoised WavLM (DeWavLM) via knowledge distillation, 
 
 ### Step 3: Training a dual-stream vocoder
 - training script: `train/train_vocoder_dual.py`
-- training configuration: `configs/cfg_train_vocoder_dual.yaml`
+- training configuration: `configs/train/vocoder_dual_onthefly.yaml`
 - inference script: `inference/infer_vocoder_dual.py`
 
 (The usage is the same as in Step 1.)

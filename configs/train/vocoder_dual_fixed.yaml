@@ -1,11 +1,13 @@
-dataset_type: paired
+repo_name: pase
+experiment: vocoder_dual_paired
+dataset_type: use_simulation_fixed
 
 encoder_config:
-  wavlm_ckpt_path: ${oc.env:PASE_DEWAVLM_CKPT}
+  wavlm_ckpt_path: ${oc.env:PASE_DEWAVLM_CKPT,checkpoints/pase_hf/DeWavLM.tar}
   output_layer: [1, 24]
 
 vocoder_config:
-  pretrained_ckpt_path: ${oc.env:PASE_VOCODER_DUAL_CKPT}
+  pretrained_ckpt_path: ${oc.env:PASE_VOCODER_DUAL_CKPT,checkpoints/pase_hf/Vocoder_Dual.tar}
   input_channels: 1024
   dim: 768
   intermediate_dim: 2304
@@ -49,8 +51,8 @@ coeff:
 samplerate: 16000
 
 train_dataset:
-  pair_csvs:
-    - ${oc.env:PASE_TRAIN_PAIRS_CSV}
+  use_simulation_root: ${oc.env:USE_SIMULATION_ROOT,../USE_simulation}
+  pair_manifest: ${oc.env:PASE_TRAIN_PAIRS_CSV,/path/to/train/paired.csv}
   wav_len: 4
   num_per_epoch: 0
   random_start: true
@@ -65,8 +67,8 @@ train_dataloader:
   pin_memory: true
 
 validation_dataset:
-  pair_csvs:
-    - ${oc.env:PASE_VALID_PAIRS_CSV}
+  use_simulation_root: ${oc.env:USE_SIMULATION_ROOT,../USE_simulation}
+  pair_manifest: ${oc.env:PASE_VALID_PAIRS_CSV,/path/to/valid/paired.csv}
   wav_len: 4
   num_per_epoch: 0
   random_start: false
@@ -84,6 +86,14 @@ trainer:
   epochs: 20
   save_checkpoint_interval: 5
   clip_grad_norm_value: 3.0
-  exp_path: ${oc.env:PASE_EXPERIMENT_ROOT}/exp_vocoder_dual_paired
+  run_root: ${oc.env:PASE_RUN_ROOT,./runs}
+  checkpoint_root: ${oc.env:PASE_GLOBAL_CHECKPOINT_DIR,./checkpoints}
+  exp_path: ${trainer.run_root}/vocoder_dual_paired
   resume: false
   resume_datetime: ""
+  use_wandb: false
+  wandb_project: pase
+  wandb_entity: null
+  wandb_mode: online
+  wandb_run_name: null
+  wandb_tags: ["pase", "vocoder_dual_paired", "use_simulation", "fixed"]
