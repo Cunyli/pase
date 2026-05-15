@@ -3,6 +3,7 @@
 
 import os
 import sys
+import csv
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 import torch
@@ -15,6 +16,23 @@ from models.vocoder.wavlmdec_dual import WavLMDec as Model
 from utils.config_utils import load_config
 
 
+def load_pair_map(pair_csv):
+    if not pair_csv:
+        return {}
+    pair_csv = os.path.expanduser(os.path.expandvars(str(pair_csv)))
+    if not os.path.isfile(pair_csv):
+        return {}
+    pairs = {}
+    with open(pair_csv, newline="") as f:
+        for row in csv.DictReader(f):
+            noisy_path = os.path.abspath(row["noisy_filepath"])
+            pairs[noisy_path] = {
+                "uid": row.get("uid") or Path(noisy_path).stem,
+                "clean_path": row["clean_filepath"],
+            }
+    return pairs
+
+
 @torch.inference_mode()
 def infer(args):
     cfg_infer = load_config(args.config)
@@ -23,9 +41,11 @@ def infer(args):
     noisy_folder = cfg_infer.test_dataset.noisy_dir
     clean_folder = cfg_infer.test_dataset.clean_dir
     save_folder = cfg_infer.network.enh_folder
-    os.makedirs(save_folder, exist_ok=True)
+    wav_folder = os.path.join(save_folder, "wav")
+    os.makedirs(wav_folder, exist_ok=True)
     
     ext = cfg_infer.test_dataset.extension
+    pair_map = load_pair_map(cfg_infer.test_dataset.get("pair_csv", None))
     
     wavs = sorted(find_files(noisy_folder, ext=ext))
     print(f"Inference on folder: {noisy_folder}, {len(wavs)} files")
@@ -61,10 +81,10 @@ def infer(args):
         else:
             esti_wav = esti_wav[..., :noisy.shape[-1]]
         
-        uid = os.path.basename(wav_path).split(f'.{ext}')[0]
-        
-        true_path = os.path.join(clean_folder, f'{uid}.{ext}')
-        esti_path = os.path.join(save_folder, f'{uid}.{ext}')
+        pair_info = pair_map.get(os.path.abspath(wav_path), {})
+        uid = pair_info.get("uid") or os.path.basename(wav_path).split(f'.{ext}')[0]
+        true_path = pair_info.get("clean_path") or os.path.join(clean_folder, f'{uid}.{ext}')
+        esti_path = os.path.join(wav_folder, f'{uid}.{ext}')
     
         sf.write(esti_path, esti_wav, fs)
         
@@ -86,7 +106,7 @@ if __name__ == "__main__":
     import argparse
     
     parser = argparse.ArgumentParser()
-    parser.add_argument('-C', '--config', default='configs/cfg_infer.yaml')
+    parser.add_argument('-C', '--config', default='configs/infer/vocoder_dual_tau_fixed.yaml')
     parser.add_argument('-D', '--device', default='0', help='Index of the gpu device')
 
     args = parser.parse_args()

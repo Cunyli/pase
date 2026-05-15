@@ -1,0 +1,101 @@
+repo_name: pase
+experiment: vocoder_dual_tau_sim_no_random_start
+dataset_type: use_simulation_fixed
+
+encoder_config:
+  wavlm_ckpt_path: ${oc.env:PASE_DEWAVLM_CKPT,checkpoints/pase_hf/DeWavLM.tar}
+  output_layer: [1, 24]
+
+vocoder_config:
+  pretrained_ckpt_path: ${oc.env:PASE_VOCODER_DUAL_CKPT,checkpoints/pase_hf/Vocoder_Dual.tar}
+  input_channels: 1024
+  dim: 768
+  intermediate_dim: 2304
+  num_layers: 12
+  n_fft: 1280
+  hop_length: 320
+
+discriminator_config:
+  mpd:
+    mpd_reshapes: [2, 3, 5, 7, 11]
+  mbd:
+    mbd_fft_sizes: [2048, 1024, 512]
+
+DDP:
+  world_size: 1
+
+optimizer:
+  lr: 1e-5
+
+scheduler:
+  warmup_steps: 1000
+  decay_until_step: 20000
+  max_lr: 1e-5
+  min_lr: 1e-6
+
+loss:
+  sampling_rate: 16000
+  n_mels: [5, 10, 20, 40, 80, 160, 320]
+  window_lengths: [32, 64, 128, 256, 512, 1024, 2048]
+  mag_weight: 0.0
+  log_weight: 1.0
+  pow: 1.0
+  weight: 1.0
+  window_type: "hann"
+
+coeff:
+  recons: 15
+  adv: 2
+  feat: 1
+
+samplerate: 16000
+
+train_dataset:
+  use_simulation_root: ${oc.env:USE_SIMULATION_ROOT,../USE_simulation}
+  pair_manifest: ${oc.env:PASE_TAU_FIXED_TRAIN_CSV,/path/to/tau/simulated/phone_room/train/paired.csv}
+  wav_len: 4
+  num_per_epoch: 0
+  random_start: false
+  default_fs: 16000
+  mode: train
+  normalize: true
+  seed: 3407
+
+train_dataloader:
+  batch_size: 4
+  num_workers: 4
+  drop_last: true
+  pin_memory: true
+
+validation_dataset:
+  use_simulation_root: ${oc.env:USE_SIMULATION_ROOT,../USE_simulation}
+  pair_manifest: ${oc.env:PASE_TAU_FIXED_VALID_CSV,/path/to/tau/simulated/phone_room/valid/paired.csv}
+  wav_len: 4
+  num_per_epoch: 0
+  random_start: false
+  default_fs: 16000
+  mode: validation
+  normalize: true
+  seed: 3407
+
+validation_dataloader:
+  batch_size: 1
+  num_workers: 4
+  drop_last: false
+  pin_memory: true
+
+trainer:
+  epochs: 120
+  save_checkpoint_interval: 5
+  clip_grad_norm_value: 3.0
+  run_root: ${oc.env:PASE_RUN_ROOT,./runs}
+  checkpoint_root: ${oc.env:PASE_GLOBAL_CHECKPOINT_DIR,./checkpoints}
+  exp_path: ${trainer.run_root}/vocoder_dual_tau_sim_no_random_start
+  resume: false
+  resume_datetime: null
+  use_wandb: true
+  wandb_project: pase
+  wandb_entity: null
+  wandb_mode: online
+  wandb_run_name: null
+  wandb_tags: ["pase", "vocoder_dual_tau_sim", "no_random_start", "use_simulation", "fixed", "tau"]
